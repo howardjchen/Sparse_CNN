@@ -65,15 +65,18 @@ void init()
 		cout << "Can not open the filters input file\n";
 		exit(-1);
 	}
-	for(i = 0; i < FILTNUM; i++){
+	for(i = 0; i < FILTNUM; i++)//512
+	{  
 		ifs >> str; 
-		for(j = 0; j < FMDEPTH; j++){
+		for(j = 0; j < FMDEPTH; j++)//512
+		{
 			ifs >> str; 
-			for(k = 0; k < FILTSIZE; k++){
-				for(l = 0; l < FILTSIZE; l++){
+			for(k = 0; k < FILTSIZE; k++)//3
+			{
+				for(l = 0; l < FILTSIZE; l++)//3
+				{
 					ifs >> tmp;
-					filtIdx = i*FMDEPTH*FILTSIZE*FILTSIZE + j*FILTSIZE*FILTSIZE 
-										+ k*FILTSIZE + l;
+					filtIdx = i*FMDEPTH*FILTSIZE*FILTSIZE + j*FILTSIZE*FILTSIZE + k*FILTSIZE + l;
 					filt[filtIdx] = tmp;
 				}
 			}
@@ -87,7 +90,7 @@ void init()
 	outGPU = new int [outVol]();
 }
 
-void initCoo()
+void initCoo()	//FILTNUM 512 FMDEPTH 512
 {
 	int i, j, k, idx;
 	short tmp, nnz;
@@ -102,9 +105,11 @@ void initCoo()
 		cout << "Can not open the filters input file\n";
 		exit(-1);
 	}
-	for(i = 0; i < FILTNUM; i++){
+	for(i = 0; i < FILTNUM; i++)
+	{
 		ifs >> str; 
-		for(j = 0; j < FMDEPTH; j++){
+		for(j = 0; j < FMDEPTH; j++)
+		{
 			ifs >> str;  
 			ifs >> str >> nnz; 
 			idx = i*FMDEPTH + j;
