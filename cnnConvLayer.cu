@@ -1,5 +1,9 @@
 // This program executes a typical convolutional layer in regular CNNs
+<<<<<<< HEAD
 //in CSR format
+=======
+//in COO format
+>>>>>>> 9b4830673b4d8058a7612449a2ce176cb96e1ab8
 #include <iostream>
 #include "cnnConvLayer.h"
 #include <stdio.h>
