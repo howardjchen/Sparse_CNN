@@ -13,8 +13,8 @@ using namespace std;
 #define FILTNUM 512
 #define STRIDE 1
 
-short *filt;
-short *inNeu;
+short *filt;	//512x3x3
+short *inNeu; 	//512x32x32
 int *outNeu;
 int *outCPU;
 int *outGPU;
@@ -105,7 +105,7 @@ void initCoo()
 	for(i = 0; i < FILTNUM; i++){
 		ifs >> str; 
 		for(j = 0; j < FMDEPTH; j++){
-			ifs >> str; 
+			ifs >> str;  
 			ifs >> str >> nnz; 
 			idx = i*FMDEPTH + j;
 			filtCooNNZ[idx] = nnz;

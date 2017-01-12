@@ -27,6 +27,18 @@ short *devFilt;
 short *devinNeu;
 int *devGlobalBarrier;
 
+/*COO Format*/
+short *devfiltCooNNZ;
+short *devfiltCooData;
+short *devfiltCooRow;
+short *devfiltCooCol;
+
+short *devinNeuCooNNZ;
+short *devinNeuCooData;
+short *devinNeuCooRow;
+short *devinNeuCooCol;
+
+
 int *outResult = new int[outputsize]();
 int *outResult_neu = new int[Outputsize]();
 int *outGlobalBarrier = new int[Outputsize]();
@@ -117,16 +129,31 @@ void initGPU()
 	int outNeuVol = FILTNUM * FMSIZE * FMSIZE;  //512x32x32
 	int outPolVol = FILTNUM * FMSIZE/2 * FMSIZE/2;  //512x16x16
 	int filtTensorVol = sizeof(short)*FILTNUM*FMDEPTH*FILTSIZE*FILTSIZE; //512x512x3x3
-	int inNeuVol = sizeof(short)*FMDEPTH*FMSIZE*FMSIZE;	//512x32x32
+	int inNeuVol = sizeof(short)*FMDEPTH*FMSIZE*FMSIZE;	//512x32x32 
+	int filtCOOVol = sizeof(short)*FILTNUM*FMDEPTH; //512x512x1
 
+	//output from kernel 
 	cudaMalloc(&devoutNeu, sizeof(int)*outNeuVol);
 	cudaMalloc(&devPooling, sizeof(int)*outPolVol);
+	
+	//input to kernel
 	cudaMalloc(&devFilt, filtTensorVol);
 	cudaMalloc(&devinNeu, inNeuVol);
-	cudaMalloc(&devGlobalBarrier,sizeof(int)*outNeuVol);
 
 	cudaMemcpy(devFilt, filt, filtTensorVol, cudaMemcpyHostToDevice);
 	cudaMemcpy(devinNeu, inNeu, inNeuVol, cudaMemcpyHostToDevice);
+
+
+	//input COO to kernel
+	cudaMalloc(&devfiltCooNNZ, filtCOOVol);
+	cudaMalloc(&devfiltCooData, filtCOOVol);
+	cudaMalloc(&devfiltCooRow, filtCOOVol);
+	cudaMalloc(&devfiltCooCol, filtCOOVol);
+
+	cudaMemcpy(devfiltCooNNZ, filtCooNNZ, filtCOOVol, cudaMemcpyHostToDevice );
+	cudaMemcpy(devfiltCooData, filtCooData, filtCOOVol, cudaMemcpyHostToDevice );
+	cudaMemcpy(devfiltCooRow, filtCooRow, filtCOOVol, cudaMemcpyHostToDevice );
+	cudaMemcpy(devfiltCooCol, filtCooCol, filtCOOVol, cudaMemcpyHostToDevice );
 
 	//cudaMemcpy(devoutNeu, outNeu,sizeof(int)*outNeuVol, cudaMemcpyHostToDevice ); // debug for race outNeu
 }
@@ -134,7 +161,7 @@ void initGPU()
 
 /***	Implement your CUDA Kernel here	***/
 __global__
-void convLayerGPU(short *FILT, short *InNeu, int *GlobalBarrier, int *outNeural, int *outPooling)
+void convLayerGPU(short *FILT, short *InNeu, short *FiltCooNNZ, short *FiltCooData, short *FiltCooRow, short *FiltCooCol, int *GlobalBarrier, int *outNeural, int *outPooling)
 {
 	int threadX = threadIdx.x + blockIdx.x * blockDim.x;
 	int threadY = threadIdx.y + blockIdx.y * blockDim.y;
@@ -244,7 +271,7 @@ int main()
  	clock_gettime(CLOCK_REALTIME, &time_begin);
 
 
-	convLayerGPU<<<numBlocks,threadPerBlock>>>(devFilt, devinNeu, devGlobalBarrier, devoutNeu, devPooling);
+	convLayerGPU<<<numBlocks,threadPerBlock>>>(devFilt, devinNeu, devfiltCooNNZ, devfiltCooData, devfiltCooRow, devfiltCooCol, devGlobalBarrier, devoutNeu, devPooling);
 	//cudaDeviceSynchronize();
 	MaxPoolingGPU<<<Pool_numBlocks , Pool_threadPerBlock>>>(devoutNeu, devPooling);
 	cudaDeviceSynchronize();
