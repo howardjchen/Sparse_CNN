@@ -1,4 +1,5 @@
 // This program executes a typical convolutional layer in regular CNNs
+//in COO format
 #include <iostream>
 #include "cnnConvLayer.h"
 #include <stdio.h>
@@ -27,6 +28,18 @@ short *devFilt;
 short *devinNeu;
 int *devGlobalBarrier;
 
+/*COO Format*/
+short *devfiltCooNNZ;
+short *devfiltCooData;
+short *devfiltCooRow;
+short *devfiltCooCol;
+
+short *devinNeuCooNNZ;
+short *devinNeuCooData;
+short *devinNeuCooRow;
+short *devinNeuCooCol;
+
+
 int *outResult = new int[outputsize]();
 int *outResult_neu = new int[Outputsize]();
 int *outGlobalBarrier = new int[Outputsize]();
@@ -54,6 +67,9 @@ void convLayerCPU()
 		{
 			for(fmx = 0; fmx < FMSIZE; fmx += STRIDE)  //32
 			{
+				
+
+
 				sum = 0;
 				for(sli = 0; sli < FMDEPTH; sli++)  //512
 				{
@@ -67,9 +83,14 @@ void convLayerCPU()
 							inNeuIdx = sli*fmArea + ifmy*FMSIZE + ifmx;							//no dependancy
 							if(ifmy >= 0 && ifmy < FMSIZE && ifmx >= 0 && ifmx < FMSIZE)
 								sum += filt[filtIdx] * inNeu[inNeuIdx];
+							//if(fn == 0 && fmx == 0 && fmy == 0 && sli <10)
+							//	printf("filt[%d] = %d\n",filtIdx,filt[filtIdx] );
 						}
 					}
 				}
+
+
+
 				// Activation - ReLU
 				outNeuIdx = fn*fmArea + fmy*FMSIZE + fmx;
 				if(sum <= 0)
@@ -116,17 +137,32 @@ void initGPU()
 {
 	int outNeuVol = FILTNUM * FMSIZE * FMSIZE;  //512x32x32
 	int outPolVol = FILTNUM * FMSIZE/2 * FMSIZE/2;  //512x16x16
-	int filtTensorVol = sizeof(short)*FILTNUM*FMDEPTH*FILTSIZE*FILTSIZE; //512x512x3x3
-	int inNeuVol = sizeof(short)*FMDEPTH*FMSIZE*FMSIZE;	//512x32x32
+	//int filtTensorVol = sizeof(short)*FILTNUM*FMDEPTH*FILTSIZE*FILTSIZE; //512x512x3x3
+	int inNeuVol = sizeof(short)*FMDEPTH*FMSIZE*FMSIZE;	//512x32x32 
+	int filtCOOVol = sizeof(short)*FILTNUM*FMDEPTH; //512x512x1
 
+	//output from kernel 
 	cudaMalloc(&devoutNeu, sizeof(int)*outNeuVol);
 	cudaMalloc(&devPooling, sizeof(int)*outPolVol);
-	cudaMalloc(&devFilt, filtTensorVol);
+	
+	//input to kernel
+	//cudaMalloc(&devFilt, filtTensorVol);
 	cudaMalloc(&devinNeu, inNeuVol);
-	cudaMalloc(&devGlobalBarrier,sizeof(int)*outNeuVol);
 
-	cudaMemcpy(devFilt, filt, filtTensorVol, cudaMemcpyHostToDevice);
+	//cudaMemcpy(devFilt, filt, filtTensorVol, cudaMemcpyHostToDevice);
 	cudaMemcpy(devinNeu, inNeu, inNeuVol, cudaMemcpyHostToDevice);
+
+
+	//input COO to kernel
+	cudaMalloc(&devfiltCooNNZ, filtCOOVol);
+	cudaMalloc(&devfiltCooData, filtCOOVol);
+	cudaMalloc(&devfiltCooRow, filtCOOVol);
+	cudaMalloc(&devfiltCooCol, filtCOOVol);
+
+	cudaMemcpy(devfiltCooNNZ, filtCooNNZ, filtCOOVol, cudaMemcpyHostToDevice );
+	cudaMemcpy(devfiltCooData, filtCooData, filtCOOVol, cudaMemcpyHostToDevice );
+	cudaMemcpy(devfiltCooRow, filtCooRow, filtCOOVol, cudaMemcpyHostToDevice );
+	cudaMemcpy(devfiltCooCol, filtCooCol, filtCOOVol, cudaMemcpyHostToDevice );
 
 	//cudaMemcpy(devoutNeu, outNeu,sizeof(int)*outNeuVol, cudaMemcpyHostToDevice ); // debug for race outNeu
 }
@@ -134,7 +170,7 @@ void initGPU()
 
 /***	Implement your CUDA Kernel here	***/
 __global__
-void convLayerGPU(short *FILT, short *InNeu, int *GlobalBarrier, int *outNeural, int *outPooling)
+void convLayerGPU(short *InNeu, short *FiltCooNNZ, short *FiltCooData, short *FiltCooRow, short *FiltCooCol, int *GlobalBarrier, int *outNeural, int *outPooling)
 {
 	int threadX = threadIdx.x + blockIdx.x * blockDim.x;
 	int threadY = threadIdx.y + blockIdx.y * blockDim.y;
@@ -144,29 +180,20 @@ void convLayerGPU(short *FILT, short *InNeu, int *GlobalBarrier, int *outNeural,
 	//int GlobalThreadId = threadX + threadY * xall + threadZ * xall * yall;
 	//int GlobalBlockId = blockIdx.x + blockIdx.y * gridDim.x + blockIdx.z * gridDim.y * gridDim.x;
 
-	int sli,y, x;
 	int ifmy, ifmx;
-	int filtIdx, inNeuIdx, outNeuIdx;
-	int filtVol = 4608;  	//512x3x3
-	int filtArea = 9;		//3x3
+	int inNeuIdx, outNeuIdx, CooIdx;
 	int fmArea = 1024;	//32x32
-	int outArea = 256;	//32/2*32/2
 	int sum = 0;
 
-	for(sli = 0; sli < 512; sli++)  //512
+	for (int i = 0; i < 512; ++i)
 	{
-		for(y = 0; y < 3; y++)  //3
-		{
-			for(x = 0; x < 3; x++)  //3
-			{
-				ifmy = threadY - 3 / 2 + y;		//no dependancy
-				ifmx = threadZ - 3 / 2 + x;		//no dependancy
-				filtIdx = (threadX * filtVol) + (sli * filtArea) + (y * 3) + x;  //no dependancy
-				inNeuIdx = sli * fmArea + ifmy * 32 + ifmx;					//no dependancy
-				if(ifmy >= 0 && ifmy < 32 && ifmx >= 0 && ifmx < 32)
-					sum += FILT[filtIdx] * InNeu[inNeuIdx];
-			}
-		}
+		CooIdx = threadX*512 + i;
+
+		ifmy = threadY - 3 / 2 + FiltCooRow[CooIdx];		
+		ifmx = threadZ - 3 / 2 + FiltCooCol[CooIdx];		
+		inNeuIdx = i * fmArea + ifmy * 32 + ifmx;	
+		if(ifmy >= 0 && ifmy < 32 && ifmx >= 0 && ifmx < 32)	
+			sum += FiltCooData[CooIdx] * InNeu[inNeuIdx];
 	}
 
 	// Activation - ReLU
@@ -223,7 +250,6 @@ int main()
 	init();
 	initCoo();
 
-
 	timespec time_begin, time_end;
   	clock_gettime(CLOCK_REALTIME, &time_begin);
 	convLayerCPU();
@@ -233,31 +259,30 @@ int main()
 	cout << "CPU time for executing a typical convolutional layer = " <<  convLayerCPUExecTime / 1000 << "ms" << endl;
 
 
-
+ 	clock_gettime(CLOCK_REALTIME, &time_begin);
  	initGPU();
  	dim3 threadPerBlock(xThreadDim, yThreadDim, zThreadDim);
  	dim3 numBlocks(xDim/xThreadDim, yDim/yThreadDim, zDim/zThreadDim);
-
  	dim3 Pool_threadPerBlock(xThreadDim, yThreadDim, zThreadDim);
  	dim3 Pool_numBlocks(Pool_xDim/xThreadDim, Pool_yDim/yThreadDim, Pool_zDim/zThreadDim);
 
- 	clock_gettime(CLOCK_REALTIME, &time_begin);
+ 	//clock_gettime(CLOCK_REALTIME, &time_begin);
 
-
-	convLayerGPU<<<numBlocks,threadPerBlock>>>(devFilt, devinNeu, devGlobalBarrier, devoutNeu, devPooling);
-	//cudaDeviceSynchronize();
+	convLayerGPU<<<numBlocks,threadPerBlock>>>(devinNeu, devfiltCooNNZ, devfiltCooData, devfiltCooRow, devfiltCooCol, devGlobalBarrier, devoutNeu, devPooling);
 	MaxPoolingGPU<<<Pool_numBlocks , Pool_threadPerBlock>>>(devoutNeu, devPooling);
 	cudaDeviceSynchronize();
 
-  	clock_gettime(CLOCK_REALTIME, &time_end);
+  	//clock_gettime(CLOCK_REALTIME, &time_end);
+
+	int outSize = sizeof(int)*outputsize;
+	cudaMemcpy(outGPU, devPooling, outSize, cudaMemcpyDeviceToHost);
+	//int OutSize = sizeof(int)*Outputsize;
+	//cudaMemcpy(outGlobalBarrier, devGlobalBarrier,OutSize, cudaMemcpyDeviceToHost );
+
+	clock_gettime(CLOCK_REALTIME, &time_end);
 	convLayerGPUExecTime = timespec_diff_us(time_begin, time_end);
 	cout << "GPU time for executing a typical convolutional layer = " << convLayerGPUExecTime / 1000 << "ms" << endl;
 
-
-	int outSize = sizeof(int)*outputsize;
-	int OutSize = sizeof(int)*Outputsize;
-	cudaMemcpy(outGPU, devPooling, outSize, cudaMemcpyDeviceToHost);
-	cudaMemcpy(outGlobalBarrier, devGlobalBarrier,OutSize, cudaMemcpyDeviceToHost );
 
 	//int OutSize = sizeof(int)*Outputsize;
 	//cudaMemcpy(outResult_neu, devoutNeu, OutSize, cudaMemcpyDeviceToHost);
