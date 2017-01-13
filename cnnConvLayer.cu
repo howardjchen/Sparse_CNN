@@ -142,23 +142,16 @@ void initGPU()
 	int filtCOOVol = sizeof(short)*FILTNUM*FMDEPTH; //512x512x1
 
 	//output from kernel 
-	cudaMalloc(&devoutNeu, sizeof(int)*outNeuVol);
-	cudaMalloc(&devPooling, sizeof(int)*outPolVol);
-	
-	//input to kernel
-	//cudaMalloc(&devFilt, filtTensorVol);
-	cudaMalloc(&devinNeu, inNeuVol);
-
-	//cudaMemcpy(devFilt, filt, filtTensorVol, cudaMemcpyHostToDevice);
-	cudaMemcpy(devinNeu, inNeu, inNeuVol, cudaMemcpyHostToDevice);
-
-
-	//input COO to kernel
-	cudaMalloc(&devfiltCooNNZ, filtCOOVol);
+	cudaMalloc(&devoutNeu, sizeof(int)*outNeuVol);	//int
+	cudaMalloc(&devPooling, sizeof(int)*outPolVol);	//int
+	cudaMalloc(&devinNeu, inNeuVol);		//short  input to kernel
+	cudaMalloc(&devfiltCooNNZ, filtCOOVol);	//short input COO to kernel
 	cudaMalloc(&devfiltCooData, filtCOOVol);
 	cudaMalloc(&devfiltCooRow, filtCOOVol);
 	cudaMalloc(&devfiltCooCol, filtCOOVol);
 
+
+	cudaMemcpy(devinNeu, inNeu, inNeuVol, cudaMemcpyHostToDevice);
 	cudaMemcpy(devfiltCooNNZ, filtCooNNZ, filtCOOVol, cudaMemcpyHostToDevice );
 	cudaMemcpy(devfiltCooData, filtCooData, filtCOOVol, cudaMemcpyHostToDevice );
 	cudaMemcpy(devfiltCooRow, filtCooRow, filtCOOVol, cudaMemcpyHostToDevice );
