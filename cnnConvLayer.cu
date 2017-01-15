@@ -1,5 +1,5 @@
 // This program executes a typical convolutional layer in regular CNNs
-//in Faster format
+//Faster format
 #include <iostream>
 #include "cnnConvLayer.h"
 #include <stdio.h>
@@ -152,8 +152,6 @@ void initFastFormat()
 		filtFastData[i] = tempdata*100; 
 		filtFastData[i] += filtCooRow[i]*10; 
 		filtFastData[i] += filtCooCol[i];
-
-		//printf("%d <--> %d%d%d \n",filtFastData[i],filtCooData[i],filtCooRow[i],filtCooCol[i] );
 	}
 }
 
@@ -197,23 +195,25 @@ void initGPU()
 	int outNeuVol = FILTNUM * FMSIZE * FMSIZE;  		//512x32x32
 	int outPolVol = FILTNUM * FMSIZE/2 * FMSIZE/2;  	//512x16x16
 	int inNeuVol = sizeof(short)*FMDEPTH*FMSIZE*FMSIZE;	//512x32x32 
-	int filtCOOVol = sizeof(short)*FILTNUM*FMDEPTH; 	//512x512x1
 
 	//output from kernel 
 	cudaMalloc(&devoutNeu, sizeof(int)*outNeuVol);	//int
 	cudaMalloc(&devPooling, sizeof(int)*outPolVol);	//int
+	cudaMalloc(&devinNeu, inNeuVol);	//input to kernel	//short  input to kernel
 
-	//input to kernel
-	cudaMalloc(&devinNeu, inNeuVol);		//short  input to kernel
-	//cudaMalloc(&devfiltCooNNZ, filtCOOVol);	//short input COO to kernel
+	cudaMemcpy(devinNeu, inNeu, inNeuVol, cudaMemcpyHostToDevice);
+}
+
+void initCooMemoryCopy()
+{
+	int filtCOOVol = sizeof(short)*FILTNUM*FMDEPTH; 	//512x512x1
+
+	cudaMalloc(&devfiltCooNNZ, filtCOOVol);	//short input COO to kernel
 	cudaMalloc(&devfiltCooData, filtCOOVol);
 	cudaMalloc(&devfiltCooRow, filtCOOVol);
 	cudaMalloc(&devfiltCooCol, filtCOOVol);
 
-
-
-	cudaMemcpy(devinNeu, inNeu, inNeuVol, cudaMemcpyHostToDevice);
-	//cudaMemcpy(devfiltCooNNZ, filtCooNNZ, filtCOOVol, cudaMemcpyHostToDevice );
+	cudaMemcpy(devfiltCooNNZ, filtCooNNZ, filtCOOVol, cudaMemcpyHostToDevice );
 	cudaMemcpy(devfiltCooData, filtCooData, filtCOOVol, cudaMemcpyHostToDevice );
 	cudaMemcpy(devfiltCooRow, filtCooRow, filtCOOVol, cudaMemcpyHostToDevice );
 	cudaMemcpy(devfiltCooCol, filtCooCol, filtCOOVol, cudaMemcpyHostToDevice );
@@ -221,7 +221,6 @@ void initGPU()
 
 void initFASTMemoryCopy()
 {
-	//int filtFASTVol = sizeof(int)*FILTNUM*FMDEPTH; 
 	cudaMalloc(&devfiltFastData, sizeof(int)*FILTNUM*FMDEPTH);
 	cudaMemcpy(devfiltFastData, filtFastData, sizeof(int)*FILTNUM*FMDEPTH, cudaMemcpyHostToDevice);
 }
@@ -366,6 +365,7 @@ int main()
 
  	clock_gettime(CLOCK_REALTIME, &time_begin);
  	initGPU();
+ 	initCooMemoryCopy();
  	initFASTMemoryCopy();
 	//convLayerGPU<<<numBlocks,threadPerBlock>>>(devinNeu, devfiltCooData, devfiltCooRow, devfiltCooCol, devoutNeu, devPooling);
 	convLayerGPU_FAST<<<numBlocks,threadPerBlock>>>(devinNeu, devfiltFastData, devoutNeu, devPooling);
