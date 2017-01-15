@@ -29,6 +29,9 @@ short *inNeuCooData;
 short *inNeuCooRow;
 short *inNeuCooCol;
 
+int *filtFastData = new int [FILTNUM*FMDEPTH];
+
+
 void init()
 {
 	int i, j, k, l;
@@ -189,6 +192,8 @@ void ending()
 	delete [] inNeuCooData;
 	delete [] inNeuCooRow;
 	delete [] inNeuCooCol;
+
+	delete [] filtFastData;
 }
 
 bool checker(){
