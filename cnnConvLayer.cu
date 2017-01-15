@@ -26,7 +26,7 @@ int *devoutNeu;
 int *devPooling;
 short *devFilt;
 short *devinNeu;
-int *devGlobalBarrier;
+
 
 /*COO Format*/
 short *devfiltCooNNZ;
@@ -40,13 +40,12 @@ short *devinNeuCooRow;
 short *devinNeuCooCol;
 
 
+int *devfiltFastData;
+
 int *outResult = new int[outputsize]();
 int *outResult_neu = new int[Outputsize]();
-int *outGlobalBarrier = new int[Outputsize]();
+int *filtFastData = new int [FILTNUM*FMDEPTH]();
 
-
-/*Fast format*/
-int *devfiltFastData;
 
 // This is the CPU version, please don't modify it
 void convLayerCPU()
@@ -142,44 +141,55 @@ void convLayerCPU()
 */
 void initFastFormat()
 {
-	for (int i = 0; i < FILTNUM*FMDEPTH; ++i)
+	int tempdata = 0;
+
+	for (int j = 0; j < FILTNUM*FMDEPTH; j++)
+		filtFastData[j] = 0;
+
+	for (int i = 0; i < FILTNUM*FMDEPTH; i++)
 	{
-		filtFastData[i] = int(filtCooData[i]* 100);
-		filtFastData[i] += int(filtCooRow[i] * 10);
-		filtFastData[i] += int(filtCooCol[i]);
+		tempdata = filtCooData[i];
+		filtFastData[i] = tempdata*100; 
+		filtFastData[i] += filtCooRow[i]*10; 
+		filtFastData[i] += filtCooCol[i];
+
+		//printf("%d <--> %d%d%d \n",filtFastData[i],filtCooData[i],filtCooRow[i],filtCooCol[i] );
 	}
 }
 
 void checkFormat()
 {
 	int data, row, col;
+	int *temp = new int [FILTNUM*FMDEPTH]();
 
 	for (int i = 0; i < FILTNUM*FMDEPTH; ++i)
 	{
-		col = filtFastData[i]%10;
-		filtFastData[i] = (filtFastData[i] - col)/10;
-		row = filtFastData[i]%10;
-		filtFastData[i] = (filtFastData[i] - row)/10;
-		data = filtFastData[i];
+		temp[i] = filtFastData[i];
 
-		if((data - filtCooData[i]) != 0)
+		col = temp[i]%10;
+		temp[i] = (temp[i] - col)/10;
+		row = temp[i]%10;
+		temp[i] = (temp[i] - row)/10;
+		data = temp[i];
+
+		if(data != filtCooData[i])
 		{
 			printf("data wrong: %d to %d at index = %d\n",data,filtCooData[i],i );
 			break;
 		}
-		else if((row - filtCooRow[i]) != 0)
+		else if(row != filtCooRow[i])
 		{
 			printf("row wrong: %d to %d at index = %d\n",row,filtCooRow[i],i );
 			break;
 		}
-		else if((col - filtCooCol[i]) != 0)
+		else if(col != filtCooCol[i])
 		{
 			printf("col wrong: %d to %d at index = %d\n",col,filtCooCol[i],i );
 			break;
 		}
 	}
 
-	printf("Format transform Done!!\n");
+	printf("Format checking Done!!\n");
 }
 
 void initGPU()
@@ -188,7 +198,6 @@ void initGPU()
 	int outPolVol = FILTNUM * FMSIZE/2 * FMSIZE/2;  	//512x16x16
 	int inNeuVol = sizeof(short)*FMDEPTH*FMSIZE*FMSIZE;	//512x32x32 
 	int filtCOOVol = sizeof(short)*FILTNUM*FMDEPTH; 	//512x512x1
-	int filtFASTVol = sizeof(int)*FILTNUM*FMDEPTH; 
 
 	//output from kernel 
 	cudaMalloc(&devoutNeu, sizeof(int)*outNeuVol);	//int
@@ -196,25 +205,31 @@ void initGPU()
 
 	//input to kernel
 	cudaMalloc(&devinNeu, inNeuVol);		//short  input to kernel
-	cudaMalloc(&devfiltCooNNZ, filtCOOVol);	//short input COO to kernel
+	//cudaMalloc(&devfiltCooNNZ, filtCOOVol);	//short input COO to kernel
 	cudaMalloc(&devfiltCooData, filtCOOVol);
 	cudaMalloc(&devfiltCooRow, filtCOOVol);
 	cudaMalloc(&devfiltCooCol, filtCOOVol);
-	cudaMalloc(&devfiltFastData, filtFASTVol);
+
 
 
 	cudaMemcpy(devinNeu, inNeu, inNeuVol, cudaMemcpyHostToDevice);
-	cudaMemcpy(devfiltCooNNZ, filtCooNNZ, filtCOOVol, cudaMemcpyHostToDevice );
+	//cudaMemcpy(devfiltCooNNZ, filtCooNNZ, filtCOOVol, cudaMemcpyHostToDevice );
 	cudaMemcpy(devfiltCooData, filtCooData, filtCOOVol, cudaMemcpyHostToDevice );
 	cudaMemcpy(devfiltCooRow, filtCooRow, filtCOOVol, cudaMemcpyHostToDevice );
 	cudaMemcpy(devfiltCooCol, filtCooCol, filtCOOVol, cudaMemcpyHostToDevice );
-	cudaMemcpy(devfiltFastData, filtFastData, filtFASTVol, cudaMemcpyHostToDevice);
+}
+
+void initFASTMemoryCopy()
+{
+	//int filtFASTVol = sizeof(int)*FILTNUM*FMDEPTH; 
+	cudaMalloc(&devfiltFastData, sizeof(int)*FILTNUM*FMDEPTH);
+	cudaMemcpy(devfiltFastData, filtFastData, sizeof(int)*FILTNUM*FMDEPTH, cudaMemcpyHostToDevice);
 }
 
 
 /***	Implement your CUDA Kernel here	***/
 __global__
-void convLayerGPU(short *InNeu, short *FiltCooNNZ, short *FiltCooData, short *FiltCooRow, short *FiltCooCol, int *GlobalBarrier, int *outNeural, int *outPooling)
+void convLayerGPU(short *InNeu, short *FiltCooData, short *FiltCooRow, short *FiltCooCol, int *outNeural, int *outPooling)
 {
 	int threadX = threadIdx.x + blockIdx.x * blockDim.x;
 	int threadY = threadIdx.y + blockIdx.y * blockDim.y;
@@ -264,23 +279,25 @@ void convLayerGPU_FAST(short *InNeu, int *FiltFastData, int *outNeural, int *out
 	int sum = 0;
 	int row = 0;
 	int col = 0;
+	int data = 0;
 
 
 	for (int i = 0; i < 512; ++i)
 	{
 		FastIdx = threadX*512 + i;
-		col = FiltFastData[FastIdx]%10;
+		data = FiltFastData[FastIdx];
 
-		FiltFastData[FastIdx] = (FiltFastData[FastIdx] - col)/10;
-		row = FiltFastData[FastIdx]%10;
+		col = data % 10;
+		data = (data - col)/10;
+		row = data%10;
+		data = (data - row)/10;
 
-		FiltFastData[FastIdx] = (FiltFastData[FastIdx] - row)/10;
 
 		ifmy = threadY - 3 / 2 + row;		
 		ifmx = threadZ - 3 / 2 + col;		
 		inNeuIdx = i * fmArea + ifmy * 32 + ifmx;	
 		if(ifmy >= 0 && ifmy < 32 && ifmx >= 0 && ifmx < 32)	
-			sum += FiltFastData[FastIdx] * InNeu[inNeuIdx];
+			sum += data * InNeu[inNeuIdx];
 	}
 
 	// Activation - ReLU
@@ -299,11 +316,6 @@ void MaxPoolingGPU(int *outNeural, int *outPooling)  // Max Pooling with Window 
 	int threadX = threadIdx.x + blockIdx.x * blockDim.x;
 	int threadY = threadIdx.y + blockIdx.y * blockDim.y;
 	int threadZ = threadIdx.z + blockIdx.z * blockDim.z;
-	//int xall = blockDim.x * gridDim.x;
-	//int yall = blockDim.y * gridDim.y;
-	//int GlobalThreadId = threadX + threadY * xall + threadZ * xall * yall;
-	//int GlobalBlockId = blockIdx.x + blockIdx.y * gridDim.x + blockIdx.z * gridDim.y * gridDim.x;
-
 	int max, tmpVal, outNeuIdx, x, y;
 	int fmArea = 1024;
 	int outArea = 256;
@@ -336,6 +348,8 @@ int main()
 	initFastFormat();
 	checkFormat();
 
+
+
 	timespec time_begin, time_end;
   	clock_gettime(CLOCK_REALTIME, &time_begin);
 	convLayerCPU();
@@ -345,21 +359,18 @@ int main()
 	cout << "CPU time for executing a typical convolutional layer = " <<  convLayerCPUExecTime / 1000 << "ms" << endl;
 
 
- 	clock_gettime(CLOCK_REALTIME, &time_begin);
- 	initGPU();
  	dim3 threadPerBlock(xThreadDim, yThreadDim, zThreadDim);
  	dim3 numBlocks(xDim/xThreadDim, yDim/yThreadDim, zDim/zThreadDim);
  	dim3 Pool_threadPerBlock(xThreadDim, yThreadDim, zThreadDim);
  	dim3 Pool_numBlocks(Pool_xDim/xThreadDim, Pool_yDim/yThreadDim, Pool_zDim/zThreadDim);
 
- 	//clock_gettime(CLOCK_REALTIME, &time_begin);
-
-	//convLayerGPU<<<numBlocks,threadPerBlock>>>(devinNeu, devfiltCooNNZ, devfiltCooData, devfiltCooRow, devfiltCooCol, devGlobalBarrier, devoutNeu, devPooling);
+ 	clock_gettime(CLOCK_REALTIME, &time_begin);
+ 	initGPU();
+ 	initFASTMemoryCopy();
+	//convLayerGPU<<<numBlocks,threadPerBlock>>>(devinNeu, devfiltCooData, devfiltCooRow, devfiltCooCol, devoutNeu, devPooling);
 	convLayerGPU_FAST<<<numBlocks,threadPerBlock>>>(devinNeu, devfiltFastData, devoutNeu, devPooling);
 	MaxPoolingGPU<<<Pool_numBlocks , Pool_threadPerBlock>>>(devoutNeu, devPooling);
 	cudaDeviceSynchronize();
-
-  	//clock_gettime(CLOCK_REALTIME, &time_end);
 
 	int outSize = sizeof(int)*outputsize;
 	cudaMemcpy(outGPU, devPooling, outSize, cudaMemcpyDeviceToHost);
@@ -391,6 +402,7 @@ int main()
 
 	delete [] outResult;
 	delete [] outResult_neu;
+	delete [] filtFastData;
 	ending();
 
 	return 0;
