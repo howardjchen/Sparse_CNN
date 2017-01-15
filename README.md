@@ -1,5 +1,5 @@
 
-# Part-II: Accelerate a sparse convolutional layer with CUDA. 
+# Accelerate a sparse convolutional layer with CUDA. 
 ## Using Coo format
 ```
 Time(%)      Time     Calls       Avg       Min       Max  Name
