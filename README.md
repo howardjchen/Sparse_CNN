@@ -49,8 +49,9 @@ Time(%)      Time     Calls       Avg       Min       Max  Name
 
 ```
 
-- **Total Result**
-## FAST Fromat
+## Result
+
+### FAST Format
 ```
   ================ Result ===================
 CPU time for executing a typical convolutional layer = 16631.2ms
@@ -59,7 +60,7 @@ Congratulations! You pass the check.
 Speedup: 147.039
 =====================================================
  ```
-
+### COO Format
 ```
  ================ Result ===================
 CPU time for executing a typical convolutional layer = 16609.3ms
