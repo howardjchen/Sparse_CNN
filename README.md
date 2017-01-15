@@ -23,7 +23,6 @@ Time(%)      Time     Calls       Avg       Min       Max  Name
   0.00%  2.7230us         2  1.3610us     838ns  1.8850us  cuDeviceGetCount
   0.00%  1.7460us         2     873ns     768ns     978ns  cuDeviceGet
 ```
-<<<<<<< HEAD
 ## Using FAST format
 ```
 ==19186== Profiling result:
@@ -60,23 +59,16 @@ Congratulations! You pass the check.
 Speedup: 147.039
 =====================================================
  ```
- ## Coo Format
- ```
-=======
 
-- **Total Result**
 ```
->>>>>>> 001d4846d042f14babfdf9d9b8fba6a811d138e5
  ================ Result ===================
 CPU time for executing a typical convolutional layer = 16609.3ms
 GPU time for executing a typical convolutional layer = 128.902ms
 Congratulations! You pass the check.
 Speedup: 128.853
 ```
-<<<<<<< HEAD
-** result : 1.14 times faster
-=======
->>>>>>> 001d4846d042f14babfdf9d9b8fba6a811d138e5
+
+**result : 1.14 times faster**
 
 
 ## Useful Reference
