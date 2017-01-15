@@ -29,6 +29,8 @@ short *inNeuCooData;
 short *inNeuCooRow;
 short *inNeuCooCol;
 
+
+
 void init()
 {
 	int i, j, k, l;
