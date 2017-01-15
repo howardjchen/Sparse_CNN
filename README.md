@@ -3,7 +3,7 @@
 ## Using Coo format
 ```
 Time(%)      Time     Calls       Avg       Min       Max  Name
- 98.28%  43.557ms         1  43.557ms  43.557ms  43.557ms  convLayerGPU(short*,short*, short*, short*, short*, int*, int*, int*)
+ 98.28%  43.557ms         1  43.557ms  43.557ms  43.557ms  convLayerGPU()
   1.20%  530.35us         5  106.07us  87.934us  176.54us  [CUDA memcpy HtoD]
   0.35%  153.76us         1  153.76us  153.76us  153.76us  MaxPoolingGPU(int*, int*)
   0.18%  80.190us         1  80.190us  80.190us  80.190us  [CUDA memcpy DtoH]
@@ -22,6 +22,15 @@ Time(%)      Time     Calls       Avg       Min       Max  Name
   0.00%  2.8640us         2  1.4320us     908ns  1.9560us  cudaConfigureCall
   0.00%  2.7230us         2  1.3610us     838ns  1.8850us  cuDeviceGetCount
   0.00%  1.7460us         2     873ns     768ns     978ns  cuDeviceGet
+```
+
+- **Total Result**
+```
+ ================ Result ===================
+CPU time for executing a typical convolutional layer = 16609.3ms
+GPU time for executing a typical convolutional layer = 128.902ms
+Congratulations! You pass the check.
+Speedup: 128.853
 ```
 
 
