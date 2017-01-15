@@ -1,99 +1,50 @@
-<h1> NCTU IEE 2016 Fall </br> Computer Architecture Final Project </h1>
 
-Part-I: Use CUDA to accelerate the operations of a typical convolutional layer in often-used large-scale neural networks. (You can find the description slides [here](https://docs.google.com/presentation/d/1uYAh4sU3ZA39zQfRGr596CdbRKgjEh4FnfDEz4eQwuU/edit?usp=sharing)) </br>
-Part-II: Accelerate a sparse convolutional layer with CUDA. (You can find the description slides [here](https://docs.google.com/presentation/d/1XkgoowAUo4Ml5EyLstSpO9aO6wPK9HeHQ5VjkjblwiI/edit#slide=id.p))
-## Three sub-directory
-### ./data
-This directory contains the input data for the base program
-* /data/filt.txt - Store the values of filters
-* /data/filt.coo - Store the values of filters in COO format
-* /data/inNeu.txt - Store the values of input neurons
-* /data/inNeu.coo - Store the values of input neurons in COO format
+# Accelerate a sparse convolutional layer with CUDA. 
+## Using Coo format
+```
+==19186== Profiling result:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 96.74%  27.827ms         1  27.827ms  27.827ms  27.827ms  convLayerGPU_FAST(short*, int*, int*, int*)
+  2.42%  696.02us         6  116.00us  87.230us  173.21us  [CUDA memcpy HtoD]
+  0.56%  161.47us         1  161.47us  161.47us  161.47us  MaxPoolingGPU(int*, int*)
+  0.28%  80.190us         1  80.190us  80.190us  80.190us  [CUDA memcpy DtoH]
 
-### ./innerProduct
-This is the example to show you how to use CUDA to accelerate Inner Product
-#### Usage
-    
-    cd ./innerProduct
-    make
-    make run
-    
-### ./device
-The program under this directory can show the device information
-#### Usage
-    
-    cd ./device
-    make
-    make run
-    
-## Usage of the base program
-### Get the code and data for part-II into a new branch
+==19186== API calls:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 71.38%  73.878ms         8  9.2348ms  3.8410us  73.455ms  cudaMalloc
+ 27.17%  28.119ms         1  28.119ms  28.119ms  28.119ms  cudaDeviceSynchronize
+  1.10%  1.1386ms         7  162.65us  89.676us  189.69us  cudaMemcpy
+  0.23%  240.68us        83  2.8990us     698ns  81.225us  cuDeviceGetAttribute
+  0.03%  34.851us         2  17.425us  8.4510us  26.400us  cudaLaunch
+  0.03%  31.569us         1  31.569us  31.569us  31.569us  cuDeviceTotalMem
+  0.03%  27.238us         1  27.238us  27.238us  27.238us  cuDeviceGetName
+  0.01%  12.362us         5  2.4720us  1.1870us  7.1240us  cudaFree
+  0.01%  8.4500us         6  1.4080us     698ns  4.4690us  cudaSetupArgument
+  0.00%  2.5840us         2  1.2920us     838ns  1.7460us  cuDeviceGetCount
+  0.00%  2.3750us         2  1.1870us     838ns  1.5370us  cudaConfigureCall
+  0.00%  2.0940us         2  1.0470us     977ns  1.1170us  cuDeviceGet
 
-    git checkout -t origin/part2
+```
 
-### Compile the code
-
-    make
-    
-### Run the code
-
-    make run
-## Task
-* Put the input data in sparse format and reimplement your CUDA kernels
-* Use NVIDIA Visual Profiler to analyze and improve your code
-* Optimize your CUDA kernels for the sparse format
-* Improve the input data format (like using other sparse format rather than COO)
-
-## Evaluation
-* convLayerCPU() will do the computation with C++ and store the output in the outCPU
-* checker() will check whether the values stored in outCPU and outGPU are the same
-    * Store your result in the outGPU in dense format
-    * You must pass the checking to ensure your result is correct!
-* Use nvvp (or nvprof) to measure the kernel execution time and data transfer time 
-* TA will use TotalExecTime to evaluate your preformance
-
-        DataTransTime = DataHostToDeviceTime + DataDeviceToHostTime
-        TotalExecTime = GPUKernelsExecTime + DataTransTime
-        
-## Grading Policy
-* Completeness (30%)
-    * Your result is correct (Pass the check) - 5%
-    * You get speedup compared to convLayerCPU() - 5%
-    * You use NVIDIA Visual Profiler (NVVP) to help you - 5%
-    * You utilize the sparsity in either Neurons or Filters - 5%
-    * Improve the input data format (like using other sparse format rather than COO) - 10%
-* Performance Ranking (30%)
-    * TA will rank your TotalExecTime on the provided server
-    * The fastest one will get 30% and the last one will get 1%
-* Report (40%)
-    * Description of your implementation and results - 5%
-    * Show how NVVP help you find and solve perf. issues - 5%
-    * Discussion on your optimizations and innovations - 20%
-    * Comparison between part-I - 5%
-    * Feedback of this project - 5%
-
-## Other Rules
-* It’s team work, 1 ~ 3 people in one team
-    * Same team members as [part-I](https://docs.google.com/spreadsheets/d/1o-Tpq2UEE8jDqwkoMaVHfYQvgkfbu5n_KWtzuctjJ7c/edit?usp=sharing)
-* Compress your code and report into one zip file and upload to E3
-    * Name your package as: LeaderID_FP2.zip
-    * One team only need to upload one package to E3
-    * Please name your report as: LeaderID_Report_FP2.pdf
-    * Make sure TA can compile and run your code on the provided server
-* Any CUDA library is forbidden to use in this project
-* Delay is NOT acceptable
-* Any plagiarism will make you get zero point
+- **Total Result**
+```
+  ================ Result ===================
+CPU time for executing a typical convolutional layer = 16631.2ms
+GPU time for executing a typical convolutional layer = 113.107ms
+Congratulations! You pass the check.
+Speedup: 147.039
+=====================================================
+ 
+ ================ Result ===================
+CPU time for executing a typical convolutional layer = 16609.3ms
+GPU time for executing a typical convolutional layer = 128.902ms
+Congratulations! You pass the check.
+Speedup: 128.853
+```
+** result : 1.14 times faster
 
 
 ## Useful Reference
-### Part-I
-* LeNet: [Gradient Based Learning Applied to Document Recognition](http://vision.stanford.edu/cs598_spring07/papers/Lecun98.pdf)
-* AlexNet: [ImageNet Classification with Deep Convolutional Neural Networks](https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf)
-* CNN: [Standford CS231n Convolutional Neural Networks for Visual Recognition](http://cs231n.github.io/convolutional-networks/)
-* CUDA Tutorial: [CUDA C/C++ Basics](http://www.nvidia.com/docs/io/116711/sc11-cuda-c-basics.pdf)
-* CNN with CUDA: [Optimizing Convolution Operations in CUDA with Adaptive Tiling convolution on gpu](http://www.few.vu.nl/~bwn200/papers/werkhoven-a4mmc2011.pdf)
-* GPU Profiling: [GPU Performance Analysis and Optimisation](http://people.maths.ox.ac.uk/gilesm/cuda/lecs/NV_Profiling_lowres.pdf)
-* GPU Profiling: [CUDA Profiling Documentation](http://docs.nvidia.com/cuda/profiler-users-guide/index.html#axzz4PPDcxdt6)
 
 ### Part-II
 * Network pruning: [Learning both Weights and Connections for Efficient Neural Networks](https://arxiv.org/pdf/1506.02626.pdf)
@@ -101,5 +52,3 @@ The program under this directory can show the device information
 * Sparse data GPU: [Implementing Sparse Matrix-Vector Multiplication on Throughput-Oriented Processors](https://pdfs.semanticscholar.org/9abb/086fabdcd2853ed8303c0f9a62cf4b917a62.pdf)
 * Sparse data with CUDA: [Efficient Sparse Matrix-Vector Multiplication on CUDA](http://wnbell.com/media/2008-12-NVR-SpMV/nvr-2008-004.pdf)
 
-TA: Chien-Yu Lin </br>
-Email: myislin@gmail.com
