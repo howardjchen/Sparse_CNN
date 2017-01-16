@@ -68,9 +68,8 @@ Speedup: 114.608
 ```
 
 ### FAST Format
->>>>>>> 4b4e42651951adc08fd1ede41a5ec750d6c79704
 ```
-  ================ Result ===================
+================ Result ===================
 CPU time for executing a typical convolutional layer = 16631.2ms
 GPU time for executing a typical convolutional layer = 113.107ms
 Congratulations! You pass the check.
@@ -78,7 +77,7 @@ Speedup: 147.039
 =====================================================
  ```
 
-** result : 1.28 times faster
+**result : 1.28 times faster**
 
 
 

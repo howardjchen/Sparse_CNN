@@ -393,7 +393,7 @@ int main()
 
 	clock_gettime(CLOCK_REALTIME, &time_end);
 	convLayerGPUExecTime = timespec_diff_us(time_begin, time_end);
-	cout << "GPU time for executing a typical convolutional layer = " << convLayerGPUExecTime / 1000 << "ms" << endl;
+	cout << "GPU time for executing a typical convolutional laygter = " << convLayerGPUExecTime / 1000 << "ms" << endl;
 
 
 
