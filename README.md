@@ -2,26 +2,28 @@
 # Accelerate a sparse convolutional layer with CUDA. 
 ## Using Coo format
 ```
+==3068== Profiling result:
 Time(%)      Time     Calls       Avg       Min       Max  Name
- 98.28%  43.557ms         1  43.557ms  43.557ms  43.557ms  convLayerGPU()
-  1.20%  530.35us         5  106.07us  87.934us  176.54us  [CUDA memcpy HtoD]
-  0.35%  153.76us         1  153.76us  153.76us  153.76us  MaxPoolingGPU(int*, int*)
-  0.18%  80.190us         1  80.190us  80.190us  80.190us  [CUDA memcpy DtoH]
+ 98.26%  43.111ms         1  43.111ms  43.111ms  43.111ms  convLayerGPU(short*, short*, short*, short*, int*, int*)
+  1.21%  530.26us         9  58.917us     832ns  174.17us  [CUDA memcpy HtoD]
+  0.35%  153.21us         1  153.21us  153.21us  153.21us  MaxPoolingGPU(int*, int*)
+  0.18%  80.286us         1  80.286us  80.286us  80.286us  [CUDA memcpy DtoH]
 
-==3341== API calls:
+==3068== API calls:
 Time(%)      Time     Calls       Avg       Min       Max  Name
- 62.64%  76.045ms         7  10.864ms  2.7940us  75.734ms  cudaMalloc
- 36.04%  43.750ms         1  43.750ms  43.750ms  43.750ms  cudaDeviceSynchronize
-  1.01%  1.2206ms         6  203.44us  175.16us  263.65us  cudaMemcpy
-  0.20%  243.33us        83  2.9310us     698ns  82.064us  cuDeviceGetAttribute
-  0.04%  43.511us         2  21.755us  9.3590us  34.152us  cudaLaunch
-  0.03%  31.568us         1  31.568us  31.568us  31.568us  cuDeviceTotalMem
-  0.02%  27.587us         1  27.587us  27.587us  27.587us  cuDeviceGetName
-  0.02%  19.345us         4  4.8360us  1.1870us  15.435us  cudaFree
-  0.01%  12.571us        10  1.2570us     698ns  4.7490us  cudaSetupArgument
-  0.00%  2.8640us         2  1.4320us     908ns  1.9560us  cudaConfigureCall
-  0.00%  2.7230us         2  1.3610us     838ns  1.8850us  cuDeviceGetCount
-  0.00%  1.7460us         2     873ns     768ns     978ns  cuDeviceGet
+ 62.76%  75.379ms        12  6.2816ms  3.5620us  74.956ms  cudaMalloc
+ 36.02%  43.260ms         1  43.260ms  43.260ms  43.260ms  cudaDeviceSynchronize
+  0.92%  1.0993ms        10  109.93us  6.0760us  193.04us  cudaMemcpy
+  0.20%  240.39us        83  2.8960us     698ns  80.876us  cuDeviceGetAttribute
+  0.03%  33.175us         2  16.587us  8.5210us  24.654us  cudaLaunch
+  0.03%  31.219us         1  31.219us  31.219us  31.219us  cuDeviceTotalMem
+  0.02%  26.610us         1  26.610us  26.610us  26.610us  cuDeviceGetName
+  0.02%  18.578us        12  1.5480us  1.1170us  6.2160us  cudaFree
+  0.01%  10.476us         8  1.3090us     698ns  4.6790us  cudaSetupArgument
+  0.00%  2.6540us         2  1.3270us     768ns  1.8860us  cuDeviceGetCount
+  0.00%  2.5840us         2  1.2920us     908ns  1.6760us  cudaConfigureCall
+  0.00%  1.6760us         2     838ns     698ns     978ns  cuDeviceGet
+
 ```
 <<<<<<< HEAD
 ## Using FAST format
@@ -50,6 +52,17 @@ Time(%)      Time     Calls       Avg       Min       Max  Name
 
 ```
 
+ ## Coo Format
+ ```
+================ Result ===================
+CPU time for executing a typical convolutional layer = 16641.5ms
+GPU time for executing a typical convolutional layer = 145.204ms
+Congratulations! You pass the check.
+Speedup: 114.608
+=====================================================
+```
+
+
 - **Total Result**
 ## FAST Fromat
 ```
@@ -60,23 +73,9 @@ Congratulations! You pass the check.
 Speedup: 147.039
 =====================================================
  ```
- ## Coo Format
- ```
-=======
 
-- **Total Result**
-```
->>>>>>> 001d4846d042f14babfdf9d9b8fba6a811d138e5
- ================ Result ===================
-CPU time for executing a typical convolutional layer = 16609.3ms
-GPU time for executing a typical convolutional layer = 128.902ms
-Congratulations! You pass the check.
-Speedup: 128.853
-```
-<<<<<<< HEAD
 ** result : 1.14 times faster
-=======
->>>>>>> 001d4846d042f14babfdf9d9b8fba6a811d138e5
+
 
 
 ## Useful Reference
